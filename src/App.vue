@@ -9,12 +9,12 @@ const gameWidth = 900
 const gameHeight = 500
 
 // Color settings
-const boardBackground = "forestgreen"
-const paddle1Color = "lightblue"
-const paddle2Color = "red"
-const paddleBorder = "black"
-const ballColor = "yellow"
-const ballBorderColor = "black"
+const boardBackground = "#0B1026"
+const paddle1Color = "#4F8BFF"
+const paddle2Color = "#db5656"       
+const paddleBorder = "#6E9FFF"
+const ballColor = "#FFFFFF"
+const ballBorderColor = "#E2E8FF"
 
 // Game configurations
 let intervalID
@@ -35,16 +35,22 @@ let paddle1 = {
   width: 25,
   height: 100,
   x: 0,
-  y: 0
+  y: 200
 }
 let paddle2 = {
   width: 25,
   height: 100,
   x: gameWidth - 25,
-  y: 0
+  y: 200
 }
 
-const gameStart = async () => {
+function setupBoard() {
+  clearBoard()
+  drawPaddles()
+  createBall()
+}
+
+const startGame = async () => {
   createBall()
   await nextTick(() => {
     intervalID = setInterval(() => {
@@ -53,9 +59,9 @@ const gameStart = async () => {
       moveBall()
       drawBall(ballX, ballY)
       checkCollision()
+      checkWinner()
     }, 10)
   })
-  
 }
 
 function clearBoard() {
@@ -116,26 +122,28 @@ function checkCollision() {
     player2Score++
     updateScore()
     createBall()
+    resetPaddlePosition()
     return
   }
   if(ballX >= gameWidth) {
     player1Score+=1
     updateScore()
     createBall()
+    resetPaddlePosition()
     return
   }
   if(ballX <= (paddle1.x + paddle1.width + ballRadius)) {
     if((ballY >= paddle1.y) && (ballY <= (paddle1.y + paddle1.height))) {
       ballX = (paddle1.x + paddle1.width) + ballRadius // prevent ball stuck
       ballXDirection *= -1
-      ballSpeed += 1
+      ballSpeed += .5
     }
   }
   if(ballX >= (paddle2.x - ballRadius)) {
     if((ballY >= paddle2.y) && (ballY <= (paddle2.y + paddle1.height))) {
       ballX = paddle2.x - ballRadius // prevent ball stuck
       ballXDirection *= -1
-      ballSpeed += 1
+      ballSpeed += .5
     }
   }
 }
@@ -171,34 +179,48 @@ function changeDirection(event) {
   }
 }
 
+function checkWinner() {
+  if(player1Score == 5) {
+    alert("Player 1 wins!")
+    resetGame()
+  }
+  if(player2Score == 5) {
+    alert("Player 2 wins!")
+    resetGame()
+  }
+}
+
 function updateScore() {
   scoreText.value = player1Score + " : " + player2Score
 }
 
-function resetGame() {
-  player1Score = 0
-  player2Score = 0
+function resetPaddlePosition() {
   paddle1 = {
     width: 25,
     height: 100,
     x: 0,
-    y: 0
+    y: 200
   }
   paddle2 = {
     width: 25,
     height: 100,
     x: gameWidth - 25,
-    y: 0
+    y: 200
   }
+}
+
+function resetGame() {
+  player1Score = 0
+  player2Score = 0
+  updateScore() // reset score
+  resetPaddlePosition()
   ballX = 0
   ballY = 0
   ballXDirection = 0
   ballYDirection = 0
   clearInterval(intervalID)
-  gameStart()
+  setupBoard()
 }
-
-
 
 onMounted(() => {
   // Variable initialization
@@ -206,39 +228,155 @@ onMounted(() => {
   // we need to wait for the HTML components to be ready before calling them
   canvas.value = document.getElementById("gameBoard")
   ctx.value = canvas.value.getContext("2d")
-  drawPaddles()
-  gameStart()
+  setupBoard()
   window.addEventListener('keydown', changeDirection);
 })  
 
 </script>
 
-<template>
-  <div id="gameContainer">
-    <h1>Pong Game</h1>
-    <canvas id="gameBoard" width="900" height="500" style="border:1px solid #FFF;"></canvas>
-    <div id="scoreboard">{{ scoreText }}</div>
-    <button id="resetBtn" @onclick="resetGame()">Reset Game</button>
+<template>  
+  <div class="game-container">
+    <h1 class="game-title">Pong Game</h1>
+    
+    <div class="canvas-container">
+      <canvas 
+        id="gameBoard" 
+        :width="gameWidth" 
+        :height="gameHeight"
+      ></canvas>
+      
+      <div class="score-display">
+        {{ scoreText }}
+      </div>
+    </div>
+
+    <div class="controls-container">
+      <div class="buttons">
+        <button class="game-button" @click="startGame()">
+          Start
+        </button>
+        <button class="game-button" @click="resetGame()">
+          Reset
+        </button>
+      </div>
+
+      <div class="controls-info">
+        <div class="player-controls">
+          <span>P1: W / S</span>
+          <span>P2: ↑ / ↓</span>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
-#gameContainer {
+.game-container {
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
+  gap: 2rem;
+  z-index: 1;
 }
 
-#resetBtn {
-  background-color: #4b75ff;
-  border: none;
-  border-radius: 8px;
-  color: white;
-  padding: 15px 32px;
+.game-title {
+  color: #fff;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
   text-align: center;
-  font-size: 16px;
-  margin: 4px 2px;
+  opacity: 0.9;
+}
+
+.canvas-container {
+  position: relative;
+  padding: 1rem;
+}
+
+#gameBoard {
+  border: 2px solid rgba(79, 139, 255, 0.2);
+  border-radius: 4px;
+  background-color: #0B1026;
+  box-shadow: 0 0 40px rgba(79, 139, 255, 0.1);
+}
+
+.score-display {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 2rem;
+  color: #fff;
+  font-weight: 200;
+  letter-spacing: 0.2em;
+  opacity: 0.9;
+}
+
+.controls-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .5rem;
+  width: 100%;
+}
+
+.buttons {
+  display: flex;
+  gap: 2rem;
+}
+
+.game-button {
+  background: transparent;
+  border: 1px solid rgba(79, 139, 255, 0.6);
+  color: #4F8BFF;
+  padding: 0.8rem 2rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  border-radius: 2px;
   cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 8px;
+  border-width: 2.5px;
+}
+
+.game-button:hover {
+  background: rgba(79, 139, 255, 0.1);
+  border-color: #4F8BFF;
+  box-shadow: 0 0 20px rgba(79, 139, 255, 0.2);
+}
+
+.controls-info {
+  margin-top: 1rem;
+}
+
+.player-controls {
+  display: flex;
+  gap: 2rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+}
+
+@media (max-width: 1024px) {
+  .game-title {
+    font-size: 1.8rem;
+  }
+
+  .score-display {
+    font-size: 2rem;
+    top: -40px;
+  }
+
+  .game-button {
+    padding: 0.6rem 1.5rem;
+  }
+
+  .player-controls {
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: center;
+  }
 }
 </style>
